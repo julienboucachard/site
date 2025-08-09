@@ -1,8 +1,10 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import fitz  # PyMuPDF
-from PIL import Image, ImageTk, ImageChops
+from PIL import Image, ImageChops
 import os
+import io
+import base64
 
 class PDFComparator:
     def __init__(self, root):
@@ -54,6 +56,13 @@ class PDFComparator:
         self.images1 = []
         self.images2 = []
 
+    def _pil_to_tk_image(self, pil_image):
+        """Converts a Pillow image to a Tkinter PhotoImage object using an in-memory GIF workaround."""
+        with io.BytesIO() as buffer:
+            pil_image.save(buffer, format="GIF")
+            b64_data = base64.b64encode(buffer.getvalue())
+        return tk.PhotoImage(data=b64_data)
+
     def open_file1(self):
         self.file1 = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
         if self.file1:
@@ -74,7 +83,7 @@ class PDFComparator:
             page = doc.load_page(page_num)
             pix = page.get_pixmap()
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-            tk_img = ImageTk.PhotoImage(img)
+            tk_img = self._pil_to_tk_image(img)
             images_list.append(tk_img)
             canvas.create_image(0, y_offset, anchor="nw", image=tk_img)
             y_offset += img.height
@@ -173,13 +182,13 @@ class PDFComparator:
                 img1 = Image.new("RGB", img2.size, (200, 200, 200)) # Gray placeholder
 
             if img1:
-                tk_img1 = ImageTk.PhotoImage(img1)
+                tk_img1 = self._pil_to_tk_image(img1)
                 self.images1.append(tk_img1)
                 self.canvas1.create_image(0, y_offset1, anchor="nw", image=tk_img1)
                 y_offset1 += img1.height
 
             if img2:
-                tk_img2 = ImageTk.PhotoImage(img2)
+                tk_img2 = self._pil_to_tk_image(img2)
                 self.images2.append(tk_img2)
                 self.canvas2.create_image(0, y_offset2, anchor="nw", image=tk_img2)
                 y_offset2 += img2.height
